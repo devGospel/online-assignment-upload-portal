@@ -65,8 +65,13 @@ export async function POST(req: NextRequest) {
 
     // Wait for the upload promise to resolve and return the response
     return await uploadPromise;
-  } catch (error) {
-    console.error('Error in file upload process:', error);
-    return NextResponse.json({ error: error.message || 'Something went wrong!' }, { status: 500 });
-  }
+ } catch (error) {
+  console.error('Error in file upload process:', error);
+  return NextResponse.json(
+    {
+      error: error instanceof Error ? error.message : 'Something went wrong!',
+    },
+    { status: 500 }
+  );
+}
 }

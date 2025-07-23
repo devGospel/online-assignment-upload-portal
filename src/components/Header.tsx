@@ -11,11 +11,6 @@ interface User {
   role?: string;
 }
 
-interface AuthState {
-  user: User | null;
-  logout: () => void;
-}
-
 // Animation variants
 const headerVariants = {
   hidden: { y: -50, opacity: 0 },
@@ -23,8 +18,16 @@ const headerVariants = {
 };
 
 const Header: React.FC = () => {
-  const { authState, logout } = useAuthContext() as { authState: AuthState; logout: () => void };
-  const user: User = authState.user || JSON.parse(localStorage.getItem('user') || '{}');
+  // Correctly destructure what useAuthContext actually returns
+  const { user, logout } = useAuthContext();
+  
+  // Safely get user from localStorage (client-side only)
+  const localStorageUser = typeof window !== 'undefined' 
+    ? JSON.parse(localStorage.getItem('user') || '{}') 
+    : {};
+  
+  // Use context user first, fallback to localStorage
+  const currentUser: User = user || localStorageUser;
 
   return (
     <motion.header
@@ -39,39 +42,39 @@ const Header: React.FC = () => {
           <h1 className="text-xl font-bold text-white">Maestro</h1>
         </div>
         <nav className="flex items-center space-x-4 sm:space-x-6">
-          <Link href="/">
-            <motion.a
+          <Link href="/" className="text-white/80 hover:text-white text-sm font-medium flex items-center">
+            <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="text-white/80 hover:text-white text-sm font-medium flex items-center"
+              className="flex items-center"
             >
               <FaHome className="mr-1" />
               Home
-            </motion.a>
+            </motion.div>
           </Link>
-          <Link href="/upload">
-            <motion.a
+          <Link href="/upload" className="text-white/80 hover:text-white text-sm font-medium flex items-center">
+            <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="text-white/80 hover:text-white text-sm font-medium flex items-center"
+              className="flex items-center"
             >
               <FaUpload className="mr-1" />
               Upload
-            </motion.a>
+            </motion.div>
           </Link>
-          {user?.role === 'admin' && (
-            <Link href="/admin">
-              <motion.a
+          {currentUser?.role === 'admin' && (
+            <Link href="/admin" className="text-white/80 hover:text-white text-sm font-medium flex items-center">
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="text-white/80 hover:text-white text-sm font-medium flex items-center"
+                className="flex items-center"
               >
                 <FaUserShield className="mr-1" />
                 Admin Panel
-              </motion.a>
+              </motion.div>
             </Link>
           )}
-          {user ? (
+          {currentUser ? (
             <motion.button
               onClick={logout}
               whileHover={{ scale: 1.05 }}
@@ -82,19 +85,18 @@ const Header: React.FC = () => {
               Logout
             </motion.button>
           ) : (
-            <Link href="/login">
-              <motion.a
+            <Link href="/login" className="text-white/80 hover:text-white text-sm font-medium">
+              <motion.div
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="text-white/80 hover:text-white text-sm font-medium"
               >
                 Login
-              </motion.a>
+              </motion.div>
             </Link>
           )}
-          {user && (
+          {currentUser && (
             <span className="text-white/80 text-sm font-medium hidden sm:inline-flex items-center">
-              {user.full_name || 'Guest'}
+              {currentUser.full_name || 'Guest'}
             </span>
           )}
         </nav>
