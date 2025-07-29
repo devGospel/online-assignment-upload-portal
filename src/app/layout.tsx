@@ -3,8 +3,10 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '../components/AuthProvider';
+import { AuthProvider } from '../app/lib/AuthProvider';
+import { ThemeProvider } from './lib/ThemeProvider';
 import Header from '../components/Header';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 
 const poppins = Poppins({
   variable: '--font-poppins',
@@ -25,10 +27,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
+        <ThemeProvider>
         <AuthProvider>
           <Header />
           <main className="min-h-screen">{children}</main>
         </AuthProvider>
+        </ThemeProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );
