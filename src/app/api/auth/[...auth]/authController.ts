@@ -1,4 +1,4 @@
-import { query } from '../../../lib/db';
+import client from '../../../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { NextRequest } from 'next/server';
@@ -27,19 +27,39 @@ interface User {
   google_id?: string;
 }
 
-// Helper functions
-async function findUserByEmail(email: string): Promise<User | null> {
-  const result = await query('SELECT * FROM users WHERE email = $1', [email]);
-  return result.rows[0] || null;
+// Initialize database tables
+async function initializeDatabase() {
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password VARCHAR(255),
+        full_name VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'user',
+        google_id VARCHAR(255) UNIQUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+    console.log('Database tables verified/created');
+  } catch (error) {
+    console.error('Database initialization failed:', error);
+    throw error;
+  }
 }
 
-async function findUserByGoogleId(googleId: string): Promise<User | null> {
-  const result = await query('SELECT * FROM users WHERE google_id = $1', [googleId]);
+// Call initialization (could be moved to server startup)
+initializeDatabase().catch(console.error);
+
+// Helper functions
+async function findUserByEmail(email: string): Promise<User | null> {
+  const result = await client.query('SELECT * FROM users WHERE email = $1', [email]);
   return result.rows[0] || null;
 }
 
 async function createUser(userData: Omit<User, 'id'>): Promise<User> {
-  const queryText = `
+  const query = `
     INSERT INTO users (email, password, full_name, role, google_id)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING id, email, full_name, role
@@ -51,15 +71,8 @@ async function createUser(userData: Omit<User, 'id'>): Promise<User> {
     userData.role || 'user',
     userData.google_id
   ];
-  const result = await query(queryText, values);
+  const result = await client.query(query, values);
   return result.rows[0];
-}
-
-async function updateUserGoogleId(userId: number, googleId: string): Promise<void> {
-  await query(
-    'UPDATE users SET google_id = $1 WHERE id = $2',
-    [googleId, userId]
-  );
 }
 
 function generateToken(user: User): string {
@@ -213,26 +226,24 @@ export const googleLogin = async (req: NextRequest) => {
       });
     }
 
-    // Check for existing user by Google ID first
-    let user = await findUserByGoogleId(googleId);
+    // Check for existing user
+    let user: User | null = await findUserByEmail(email);
     
     if (!user) {
-      // If no user with Google ID, check by email
-      user = await findUserByEmail(email);
-      
-      if (user) {
-        // User exists but hasn't logged in with Google before
-        await updateUserGoogleId(user.id, googleId);
-        user.google_id = googleId;
-      } else {
-        // Create new user with Google auth
-        user = await createUser({
-          email,
-          full_name: name || 'Google User',
-          role: 'user',
-          google_id: googleId
-        });
-      }
+      // Create new user with Google auth
+      user = await createUser({
+        email,
+        full_name: name || 'Google User',
+        role: 'user',
+        google_id: googleId
+      });
+    } else if (!user.google_id) {
+      // Update existing user with Google ID
+      await client.query(
+        'UPDATE users SET google_id = $1 WHERE id = $2',
+        [googleId, user.id]
+      );
+      user.google_id = googleId;
     }
 
     const token = generateToken(user);

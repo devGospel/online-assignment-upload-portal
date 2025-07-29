@@ -28,12 +28,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${poppins.variable} antialiased`}>
         <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}>
-        <ThemeProvider>
+        {/* <ThemeProvider> */}
         <AuthProvider>
           <Header />
           <main className="min-h-screen">{children}</main>
         </AuthProvider>
-        </ThemeProvider>
+        {/* </ThemeProvider> */}
         </GoogleOAuthProvider>
       </body>
     </html>

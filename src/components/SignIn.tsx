@@ -5,7 +5,7 @@ import { FaUser, FaLock, FaGoogle } from 'react-icons/fa';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthContext } from '../lib/AuthProvider';
+import { useAuthContext } from '../app/lib/AuthProvider';
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 
 const containerVariants = {

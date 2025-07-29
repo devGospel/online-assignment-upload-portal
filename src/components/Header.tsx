@@ -1,7 +1,8 @@
+
 'use client';
 
 import { motion } from 'framer-motion';
-import { FaBookOpen, FaUserShield, FaSignOutAlt, FaHome, FaUpload } from 'react-icons/fa';
+import { FaBookOpen, FaUserShield, FaSignOutAlt, FaHome, FaUpload, FaTachometerAlt } from 'react-icons/fa';
 import Link from 'next/link';
 import { useAuthContext } from '../app/lib/AuthProvider';
 
@@ -43,6 +44,18 @@ const Header: React.FC = () => {
               Home
             </motion.div>
           </Link>
+          {user && (
+            <Link href="/dashboard" className="text-white/80 hover:text-white text-sm font-medium flex items-center">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center"
+              >
+                <FaTachometerAlt className="mr-1" />
+                Dashboard
+              </motion.div>
+            </Link>
+          )}
           <Link href="/upload" className="text-white/80 hover:text-white text-sm font-medium flex items-center">
             <motion.div
               whileHover={{ scale: 1.05 }}
