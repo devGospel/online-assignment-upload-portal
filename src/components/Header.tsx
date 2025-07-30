@@ -131,7 +131,7 @@ const Header: React.FC = () => {
             exit="closed"
             className="md:hidden bg-white/10 backdrop-blur-md border-t border-white/20 absolute top-full left-0 right-0 z-50"
           >
-            <div className="flex flex-col items-start px-4 py-4 space-y-4">
+            <div className="bg-white/10 backdrop-blur-md flex flex-col items-start px-4 py-4 space-y-4">
               <Link href="/" className="text-white/80 hover:text-white text-sm font-medium flex items-center" onClick={toggleMobileMenu}>
                 <motion.div
                   whileHover={{ scale: 1.05 }}
