@@ -19,7 +19,7 @@ const itemVariants = {
 
 export default function LandingPage() {
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+		<div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center mt-16 px-4 sm:px-6 lg:px-8">
 			<motion.div
 				variants={containerVariants}
 				initial="hidden"

@@ -1,10 +1,9 @@
-// app/admin/page.tsx
-import AdminPanel from "@/components/AdminPanel";
+import AdminPanel from "@/components/Admin/AdminPanel";
 
-export default function UploadPage() {
-	return (
-		<div>
-			<AdminPanel />
-		</div>
-	);
-}
+const Page = () => {
+	<>
+		<AdminPanel />
+	</>;
+};
+
+export default Page;
