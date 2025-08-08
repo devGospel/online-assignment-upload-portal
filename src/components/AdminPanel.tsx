@@ -1,11 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { FaUpload, FaBookOpen, FaUserGraduate } from "react-icons/fa";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MaterialSymbolsDownloadSharp } from "./icons/download-sharp";
 import { MaterialSymbolsVisibilityOutlineRounded } from "./icons/preview";
+import PreviewDocument from "./PreviewDocument";
 
 const containerVariants = {
 	hidden: { opacity: 0 },
@@ -31,6 +30,8 @@ interface ISubmission {
 
 export default function AdminPanel() {
 	const [submissions, setSubmissions] = useState<ISubmission[]>([]);
+	const [currentPreview, setCurrentPreview] = useState<string>("");
+	const [showPreview, setShowPreview] = useState<boolean>(false);
 	useEffect(() => {
 		(async () => {
 			try {
@@ -68,6 +69,11 @@ export default function AdminPanel() {
 		URL.revokeObjectURL(url);
 	}
 
+	const handlePreview = (submission: ISubmission) => {
+		setCurrentPreview(submission.file_url);
+		setShowPreview(true);
+	};
+
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
 			<motion.div>
@@ -98,7 +104,10 @@ export default function AdminPanel() {
 									{submission.matric_number.toUpperCase()}
 								</td>
 								<td className="py-4 flex gap-6">
-									<button className="before:content-['Preview'] hover:before:opacity-100 before:absolute before:opacity-0 before:bg-gray-200 before:text-black before:translate-y-full before:p-2 before:text-xs befor:duration-300 before:rounded ">
+									<button
+										onClick={() => handlePreview(submission)}
+										className="before:content-['Preview'] hover:before:opacity-100 before:absolute before:opacity-0 before:bg-gray-200 before:text-black before:translate-y-full before:p-2 before:text-xs befor:duration-300 before:rounded "
+									>
 										<MaterialSymbolsVisibilityOutlineRounded className="text-2xl" />
 										<span className="sr-only">Preview</span>
 									</button>
@@ -115,6 +124,12 @@ export default function AdminPanel() {
 					</motion.tbody>
 				</motion.table>
 			</motion.div>
+			{showPreview && (
+				<PreviewDocument
+					documentUrl={currentPreview}
+					setShow={setShowPreview}
+				/>
+			)}
 		</div>
 	);
 }

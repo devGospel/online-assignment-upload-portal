@@ -1,9 +1,12 @@
-import AdminPanel from "@/components/Admin/AdminPanel";
+"use client";
+import AdminPanel from "../../components/AdminPanel";
 
 const Page = () => {
-	<>
-		<AdminPanel />
-	</>;
+	return (
+		<>
+			<AdminPanel />
+		</>
+	);
 };
 
 export default Page;
