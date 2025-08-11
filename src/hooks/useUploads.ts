@@ -28,25 +28,43 @@ export function useUploads(filters: Filters, page: number) {
       setError(null);
       try {
         const token = localStorage.getItem("token");
-        const params = new URLSearchParams({
-          page: page.toString(),
-          limit: "10",
-          ...(filters.studentName && { studentName: filters.studentName }),
-          ...(filters.matricNumber && { matricNumber: filters.matricNumber }),
-          ...(filters.date && { date: filters.date }),
+        if (!token) {
+          throw new Error("No authentication token found");
+        }
+
+        // Create URLSearchParams and properly handle all parameters
+        const params = new URLSearchParams();
+        params.append("page", page.toString());
+        params.append("limit", "10");
+        
+        // Always include all filters, even if empty
+        params.append("studentName", filters.studentName);
+        params.append("matricNumber", filters.matricNumber);
+        params.append("date", filters.date);
+
+        // Debug: Log the actual URL being requested
+        console.log(`Fetching: /api/assignments?${params.toString()}`);
+
+        const res = await fetch(`/api/assignments?${params.toString()}`, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
         });
-        const res = await fetch(`/api/assignments?${params}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+
         if (!res.ok) {
-          throw new Error(`Failed to fetch uploads: ${res.statusText}`);
+          throw new Error(`Failed to fetch uploads: ${res.status} ${res.statusText}`);
         }
+
         const data = await res.json();
-        if (data.error) {
-          throw new Error(data.error);
+        
+        // Validate response structure
+        if (!data || !Array.isArray(data.assignments)) {
+          throw new Error("Invalid data format received from server");
         }
+
         setUploads(data.assignments);
-        setTotalPages(data.pages);
+        setTotalPages(data.pages || 1);
       } catch (error) {
         console.error("Error fetching uploads:", error);
         setError(error instanceof Error ? error.message : "Failed to fetch uploads");
@@ -54,8 +72,9 @@ export function useUploads(filters: Filters, page: number) {
         setLoading(false);
       }
     };
+
     fetchUploads();
-  }, [page, filters]);
+  }, [page, filters.studentName, filters.matricNumber, filters.date]); // More granular dependencies
 
   return { uploads, totalPages, loading, error };
 }

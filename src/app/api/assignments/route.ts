@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const pages = Math.ceil(total / limit);
 
     // Log result for debugging
-    console.log('Assignments Result:', { total: result.rows.length, pages, total });
+    console.log('Assignments Result:', { total: result.rows.length, pages });
 
     return NextResponse.json({
       assignments: result.rows,
