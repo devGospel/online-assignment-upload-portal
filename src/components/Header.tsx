@@ -153,9 +153,9 @@ const Header: React.FC = () => {
 						initial="closed"
 						animate="open"
 						exit="closed"
-						className="md:hidden bg-white/10 backdrop-blur-md border-t border-white/20 absolute top-full left-0 right-0 z-50"
+						className="md:hidden bg-black/95 backdrop-blur-md border-t border-white/20 absolute top-full left-0 right-0 z-50"
 					>
-						<div className="bg-white/10 backdrop-blur-md flex flex-col items-start px-4 py-4 space-y-4">
+						<div className="flex flex-col items-start px-4 py-4 space-y-4">
 							<Link
 								href="/"
 								className="text-white/80 hover:text-white text-sm font-medium flex items-center"
@@ -200,7 +200,7 @@ const Header: React.FC = () => {
 									Upload
 								</motion.div>
 							</Link>
-							{user?.role === "admin" && (
+							{/* {user?.role === "admin" && (
 								<Link
 									href="/admin"
 									className="text-white/80 hover:text-white text-sm font-medium flex items-center"
@@ -215,7 +215,7 @@ const Header: React.FC = () => {
 										Admin Panel
 									</motion.div>
 								</Link>
-							)}
+							)} */}
 							{user ? (
 								<>
 									<span className="text-white/80 text-sm font-medium flex items-center capitalize">

@@ -1,4 +1,3 @@
-// hooks/useAssignments.ts
 import { useState, useEffect } from "react";
 
 interface ISubmission {
@@ -12,42 +11,79 @@ interface ISubmission {
 }
 
 interface Filters {
-  matricNumber: string;
-  date: string;
+  studentName?: string;
+  matricNumber?: string;
+  date?: string;
 }
 
-export function useAssignments(filters: Filters, page: number, userRole: string | undefined) {
-  const [uploads, setUploads] = useState<ISubmission[]>([]);
-  const [totalUploads, setTotalUploads] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
+interface UseAssignmentsResult {
+  uploads: ISubmission[];
+  totalUploads: number;
+  totalPages: number;
+  loading: boolean;
+  error: Error | null;
+}
+
+export function useAssignments(
+  filters: Filters, 
+  page: number, 
+  userRole: string | undefined
+): UseAssignmentsResult {
+  const [state, setState] = useState<UseAssignmentsResult>({
+    uploads: [],
+    totalUploads: 0,
+    totalPages: 1,
+    loading: true,
+    error: null
+  });
 
   useEffect(() => {
     const fetchAssignments = async () => {
-      setLoading(true);
       try {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+        
         const token = localStorage.getItem("token");
+        if (!token) {
+          throw new Error("Authentication token not found");
+        }
+
         const params = new URLSearchParams({
           page: page.toString(),
           limit: "10",
           ...(filters.matricNumber && { matricNumber: filters.matricNumber }),
           ...(filters.date && { date: filters.date }),
+          ...(userRole === "admin" && filters.studentName && { studentName: filters.studentName })
         });
+
         const res = await fetch(`/api/assignments?${params}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch: ${res.status} ${res.statusText}`);
+        }
+
         const data = await res.json();
-        setUploads(data.assignments);
-        setTotalPages(data.pages);
-        setTotalUploads(data.total);
+        setState({
+          uploads: data.assignments || [],
+          totalUploads: data.total || 0,
+          totalPages: data.pages || 1,
+          loading: false,
+          error: null
+        });
       } catch (error) {
-        console.error("Error fetching assignments:", error);
-      } finally {
-        setLoading(false);
+        setState({
+          uploads: [],
+          totalUploads: 0,
+          totalPages: 1,
+          loading: false,
+          error: error instanceof Error ? error : new Error("An unknown error occurred")
+        });
       }
     };
+
     fetchAssignments();
   }, [page, filters, userRole]);
 
-  return { uploads, totalUploads, totalPages, loading };
+  return state;
 }

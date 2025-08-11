@@ -19,27 +19,55 @@ export default function Users() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [uploads, setUploads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({ matricNumber: '', date: '' });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
-    if (user?.role !== 'admin') {
+    if (!user || user?.role !== 'admin') {
       router.push('/dashboard');
       return;
     }
 
     const fetchUsers = async () => {
       setLoading(true);
+      setError(null);
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Please log in to view users');
+          router.push('/login');
+          return;
+        }
+
         const res = await fetch('/api/users', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            setError('Session expired. Please log in again.');
+            localStorage.removeItem('token');
+            router.push('/login');
+            return;
+          }
+          const errorData = await res.json();
+          throw new Error(errorData.error || `API error: ${res.status}`);
+        }
+
         const data = await res.json();
+        if (!data.users || !Array.isArray(data.users)) {
+          setError('Invalid data received from server');
+          setUsers([]);
+          return;
+        }
+
         setUsers(data.users);
       } catch (error) {
         console.error('Error fetching users:', error);
+        setError(error instanceof Error ? error.message : 'Failed to load users. Please try again later.');
+        setUsers([]);
       } finally {
         setLoading(false);
       }
@@ -49,22 +77,52 @@ export default function Users() {
 
   const fetchUserUploads = async (matricNumber: string) => {
     setLoading(true);
+    setError(null);
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to view uploads');
+        router.push('/login');
+        return;
+      }
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '10',
         matricNumber,
         ...(filters.date && { date: filters.date }),
       });
+
       const res = await fetch(`/api/assignments?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError('Session expired. Please log in again.');
+          localStorage.removeItem('token');
+          router.push('/login');
+          return;
+        }
+        const errorData = await res.json();
+        throw new Error(errorData.error || `API error: ${res.status}`);
+      }
+
       const data = await res.json();
+      if (!data.assignments || !Array.isArray(data.assignments)) {
+        setError('Invalid data received for uploads');
+        setUploads([]);
+        setTotalPages(1);
+        return;
+      }
+
       setUploads(data.assignments);
-      setTotalPages(data.pages);
+      setTotalPages(data.pages || 1);
     } catch (error) {
       console.error('Error fetching user uploads:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load uploads. Please try again later.');
+      setUploads([]);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -79,6 +137,9 @@ export default function Users() {
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
     setPage(1);
+    if (selectedUser) {
+      fetchUserUploads(selectedUser.matric_number);
+    }
   };
 
   return (
@@ -89,22 +150,29 @@ export default function Users() {
         transition={{ duration: 0.5 }}
         className="max-w-7xl mx-auto w-full"
       >
-        <h1 className="text-3xl font-bold mb-8 text-white">
-          Users
-        </h1>
+        {error && (
+          <div className="mb-4 p-4 bg-red-500/20 text-red-300 rounded-lg">
+            {error}
+          </div>
+        )}
+        <h1 className="text-3xl font-bold mb-8 text-white">Users</h1>
         <div className="flex flex-col sm:flex-row gap-6">
           <div className="p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl w-full sm:w-1/3">
             <div className="flex items-center mb-4">
               <FaUsers className="mr-2 text-blue-400" />
-              <h2 className="text-xl font-semibold text-white">
-                All Users
-              </h2>
+              <h2 className="text-xl font-semibold text-white">All Users</h2>
             </div>
             <div className="overflow-y-auto max-h-[600px]">
               {loading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <div key={i} className="p-3"><SkeletonLoader type="table-row" /></div>
-                ))
+                Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <div key={i} className="p-3">
+                      <SkeletonLoader type="table-row" />
+                    </div>
+                  ))
+              ) : users.length === 0 ? (
+                <p className="text-white/70 p-3">No users found</p>
               ) : (
                 users.map((u) => (
                   <motion.div
@@ -115,12 +183,8 @@ export default function Users() {
                     onClick={() => handleUserClick(u)}
                     className="p-3 cursor-pointer rounded-lg hover:bg-white/20"
                   >
-                    <p className="font-semibold text-white">
-                      {u.full_name}
-                    </p>
-                    <p className="text-white/70">
-                      {u.matric_number || u.email}
-                    </p>
+                    <p className="font-semibold text-white">{u.full_name}</p>
+                    <p className="text-white/70">{u.matric_number || u.email}</p>
                   </motion.div>
                 ))
               )}
@@ -172,11 +236,21 @@ export default function Users() {
                 </thead>
                 <tbody>
                   {loading || !selectedUser ? (
-                    Array(5).fill(0).map((_, i) => (
-                      <tr key={i}>
-                        <td colSpan={6}><SkeletonLoader type="table-row" /></td>
-                      </tr>
-                    ))
+                    Array(5)
+                      .fill(0)
+                      .map((_, i) => (
+                        <tr key={i}>
+                          <td colSpan={6}>
+                            <SkeletonLoader type="table-row" />
+                          </td>
+                        </tr>
+                      ))
+                  ) : uploads.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-3 text-white/70">
+                        No uploads found
+                      </td>
+                    </tr>
                   ) : (
                     uploads.map((upload) => (
                       <motion.tr
@@ -190,9 +264,16 @@ export default function Users() {
                         <td className="p-3 text-white">{upload.matric_number}</td>
                         <td className="p-3 text-white">{upload.course_code}</td>
                         <td className="p-3 text-white">{upload.level}</td>
-                        <td className="p-3 text-white">{new Date(upload.uploaded_at).toLocaleDateString()}</td>
+                        <td className="p-3 text-white">
+                          {new Date(upload.uploaded_at).toLocaleDateString()}
+                        </td>
                         <td className="p-3">
-                          <a href={upload.file_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                          <a
+                            href={upload.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300"
+                          >
                             View File
                           </a>
                         </td>

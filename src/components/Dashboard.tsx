@@ -48,28 +48,24 @@ export default function Dashboard() {
   });
   const [page, setPage] = useState(1);
 
-  // Use custom hooks with proper error handling
   const { 
-    uploads = [],  // Default to empty array if undefined
-    totalUploads = 0, 
-    totalPages = 1, 
+    uploads, 
+    totalUploads, 
+    totalPages, 
     loading: assignmentsLoading,
     error: assignmentsError 
   } = useAssignments(filters, page, user?.role);
   
   const { 
-    totalUsers = 0, 
+    totalUsers, 
     loading: usersLoading,
     error: usersError 
   } = useUsers(user?.role);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ 
-      ...prev, 
-      [name]: value 
-    }));
-    setPage(1); // Reset to first page when filters change
+    setFilters(prev => ({ ...prev, [name]: value }));
+    setPage(1);
   };
 
   async function downloadFile(submission: ISubmission) {
@@ -79,20 +75,21 @@ export default function Dashboard() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const file = await fetch(submission.file_url, {
+      const response = await fetch(submission.file_url, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!file.ok) {
-        throw new Error(`Failed to download file: ${file.status} ${file.statusText}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
       }
-      const data = await file.blob();
-      const url = URL.createObjectURL(data);
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${submission.matric_number.replaceAll(
-        "/",
-        "-"
-      )}_${submission.student_name.replaceAll(" ", "_").toLowerCase()}.pdf`;
+      a.download = `${submission.matric_number.replace("/", "-")}_${
+        submission.student_name.replace(" ", "_").toLowerCase()
+      }.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -102,13 +99,12 @@ export default function Dashboard() {
     }
   }
 
-  // Format date for display
   const formatDateForDisplay = (dateString: string) => {
     if (!dateString) return "";
     const date = new Date(dateString);
     return isNaN(date.getTime()) 
       ? dateString 
-      : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+      : date.toLocaleString();
   };
 
   return (
@@ -133,6 +129,8 @@ export default function Dashboard() {
           >
             {assignmentsLoading ? (
               <SkeletonLoader type="card" />
+            ) : assignmentsError ? (
+              <div className="text-red-400">Error loading data</div>
             ) : (
               <>
                 <FaUpload className="text-3xl mb-4 text-blue-400 mx-auto" />
@@ -152,6 +150,8 @@ export default function Dashboard() {
             >
               {usersLoading ? (
                 <SkeletonLoader type="card" />
+              ) : usersError ? (
+                <div className="text-red-400">Error loading data</div>
               ) : (
                 <>
                   <FaUsers className="text-3xl mb-4 text-blue-400 mx-auto" />
@@ -246,7 +246,7 @@ export default function Dashboard() {
                     ) : uploads.length === 0 ? (
                       <tr>
                         <td colSpan={6} className="p-4 text-center text-white">
-                          No uploads found
+                          {assignmentsError ? "Error loading data" : "No uploads found"}
                         </td>
                       </tr>
                     ) : (
@@ -289,7 +289,7 @@ export default function Dashboard() {
                   ))
                 ) : uploads.length === 0 ? (
                   <div className="p-4 text-center text-white">
-                    No uploads found
+                    {assignmentsError ? "Error loading data" : "No uploads found"}
                   </div>
                 ) : (
                   uploads.map((upload) => (
@@ -351,3 +351,28 @@ export default function Dashboard() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
