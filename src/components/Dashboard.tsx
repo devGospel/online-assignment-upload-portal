@@ -41,16 +41,35 @@ export default function Dashboard() {
   const { user } = useAuthContext();
   const router = useRouter();
   const isAdmin = user?.role === "admin";
-  const [filters, setFilters] = useState({ studentName: "", matricNumber: "", date: "" });
+  const [filters, setFilters] = useState({ 
+    studentName: "", 
+    matricNumber: "", 
+    date: "" 
+  });
   const [page, setPage] = useState(1);
 
-  // Use custom hooks
-  const { uploads, totalUploads, totalPages, loading: assignmentsLoading } = useAssignments(filters, page, user?.role);
-  const { totalUsers, loading: usersLoading } = useUsers(user?.role);
+  // Use custom hooks with proper error handling
+  const { 
+    uploads = [],  // Default to empty array if undefined
+    totalUploads = 0, 
+    totalPages = 1, 
+    loading: assignmentsLoading,
+    error: assignmentsError 
+  } = useAssignments(filters, page, user?.role);
+  
+  const { 
+    totalUsers = 0, 
+    loading: usersLoading,
+    error: usersError 
+  } = useUsers(user?.role);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
-    setPage(1);
+    const { name, value } = e.target;
+    setFilters(prev => ({ 
+      ...prev, 
+      [name]: value 
+    }));
+    setPage(1); // Reset to first page when filters change
   };
 
   async function downloadFile(submission: ISubmission) {
@@ -82,6 +101,15 @@ export default function Dashboard() {
       console.error("Error downloading file:", error);
     }
   }
+
+  // Format date for display
+  const formatDateForDisplay = (dateString: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) 
+      ? dateString 
+      : `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+  };
 
   return (
     <div className="min-h-screen p-4 sm:p-6 mt-16 bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center">
@@ -120,94 +148,109 @@ export default function Dashboard() {
               animate="visible"
               whileHover={{ scale: 1.05 }}
               onClick={() => router.push("/dashboard/users")}
-            className="p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl cursor-pointer text-white"
-          >
-            {usersLoading ? (
-              <SkeletonLoader type="card" />
-            ) : (
-              <>
-                <FaUsers className="text-3xl mb-4 text-blue-400 mx-auto" />
-                <h3 className="text-xl font-semibold text-white">Total Users</h3>
-                <p className="text-3xl font-bold text-white">{totalUsers}</p>
-              </>
-            )}
-          </motion.div>
-        )}
-      </div>
-
-      {/* Recent Uploads Section */}
-      <div className="p-4 sm:p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl">
-        <div className="flex items-center mb-4">
-          <FaFilter className="mr-2 text-blue-400" />
-          <h2 className="text-lg sm:text-xl font-semibold text-white">Recent Uploads</h2>
+              className="p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl cursor-pointer text-white"
+            >
+              {usersLoading ? (
+                <SkeletonLoader type="card" />
+              ) : (
+                <>
+                  <FaUsers className="text-3xl mb-4 text-blue-400 mx-auto" />
+                  <h3 className="text-xl font-semibold text-white">Total Users</h3>
+                  <p className="text-3xl font-bold text-white">{totalUsers}</p>
+                </>
+              )}
+            </motion.div>
+          )}
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-          {isAdmin && (
+
+        {/* Recent Uploads Section */}
+        <div className="p-4 sm:p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl">
+          <div className="flex items-center mb-4">
+            <FaFilter className="mr-2 text-blue-400" />
+            <h2 className="text-lg sm:text-xl font-semibold text-white">Recent Uploads</h2>
+          </div>
+          
+          {/* Filter Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            {isAdmin && (
+              <div className="flex items-center">
+                <FaUser className="mr-2 text-blue-400" />
+                <input
+                  type="text"
+                  name="studentName"
+                  placeholder="Filter by Student Name"
+                  value={filters.studentName}
+                  onChange={handleFilterChange}
+                  className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
+                />
+              </div>
+            )}
             <div className="flex items-center">
-              <FaUser className="mr-2 text-blue-400" />
+              <FaIdCard className="mr-2 text-blue-400" />
               <input
                 type="text"
-                name="studentName"
-                placeholder="Filter by Student Name"
-                value={filters.studentName}
+                name="matricNumber"
+                placeholder="Filter by Matric Number"
+                value={filters.matricNumber}
                 onChange={handleFilterChange}
                 className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
               />
             </div>
+            <div className="flex items-center">
+              <FaCalendar className="mr-2 text-blue-400" />
+              <input
+                type="date"
+                name="date"
+                value={filters.date}
+                onChange={handleFilterChange}
+                className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
+              />
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {assignmentsError && (
+            <div className="p-4 bg-red-500/20 rounded-lg text-white text-sm sm:text-base mb-4">
+              <p>Error loading uploads: {assignmentsError.message}</p>
+            </div>
           )}
-          <div className="flex items-center">
-            <FaIdCard className="mr-2 text-blue-400" />
-            <input
-              type="text"
-              name="matricNumber"
-              placeholder="Filter by Matric Number"
-              value={filters.matricNumber}
-              onChange={handleFilterChange}
-              className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
-            />
-          </div>
-          <div className="flex items-center">
-            <FaCalendar className="mr-2 text-blue-400" />
-            <input
-              type="date"
-              name="date"
-              value={filters.date}
-              onChange={handleFilterChange}
-              className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
-            />
-          </div>
-        </div>
-        {!isAdmin && !filters.matricNumber ? (
-          <div className="p-4 bg-yellow-500/20 rounded-lg text-white text-sm sm:text-base">
-            <p>Please enter your matric number to view your upload history.</p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="text-white/80">
-                    <th className="p-3 text-sm sm:text-base">Student Name</th>
-                    <th className="p-3 text-sm sm:text-base">Matric Number</th>
-                    <th className="p-3 text-sm sm:text-base">Course Code</th>
-                    <th className="p-3 text-sm sm:text-base">Level</th>
-                    <th className="p-3 text-sm sm:text-base">Upload Date/Time</th>
-                    <th className="p-3 text-sm sm:text-base">File</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignmentsLoading
-                    ? Array(5)
-                        .fill(0)
-                        .map((_, i) => (
-                          <tr key={i}>
-                            <td colSpan={6}>
-                              <SkeletonLoader type="table-row" />
-                            </td>
-                          </tr>
-                        ))
-                    : uploads.map((upload) => (
+
+          {!isAdmin && !filters.matricNumber ? (
+            <div className="p-4 bg-yellow-500/20 rounded-lg text-white text-sm sm:text-base">
+              <p>Please enter your matric number to view your upload history.</p>
+            </div>
+          ) : (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-white/80">
+                      <th className="p-3 text-sm sm:text-base">Student Name</th>
+                      <th className="p-3 text-sm sm:text-base">Matric Number</th>
+                      <th className="p-3 text-sm sm:text-base">Course Code</th>
+                      <th className="p-3 text-sm sm:text-base">Level</th>
+                      <th className="p-3 text-sm sm:text-base">Upload Date/Time</th>
+                      <th className="p-3 text-sm sm:text-base">File</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assignmentsLoading ? (
+                      Array(5).fill(0).map((_, i) => (
+                        <tr key={i}>
+                          <td colSpan={6}>
+                            <SkeletonLoader type="table-row" />
+                          </td>
+                        </tr>
+                      ))
+                    ) : uploads.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-4 text-center text-white">
+                          No uploads found
+                        </td>
+                      </tr>
+                    ) : (
+                      uploads.map((upload) => (
                         <motion.tr
                           key={upload.id}
                           variants={tableRowVariants}
@@ -220,9 +263,7 @@ export default function Dashboard() {
                           <td className="p-3 text-white text-sm sm:text-base">{upload.course_code}</td>
                           <td className="p-3 text-white text-sm sm:text-base">{upload.level}</td>
                           <td className="p-3 text-white text-center text-sm sm:text-base">
-                            {new Date(upload.uploaded_at).toLocaleDateString()}
-                            <br />
-                            {new Date(upload.uploaded_at).toLocaleTimeString()}
+                            {formatDateForDisplay(upload.uploaded_at)}
                           </td>
                           <td className="p-3">
                             <button
@@ -234,20 +275,24 @@ export default function Dashboard() {
                             </button>
                           </td>
                         </motion.tr>
-                      ))}
-                </tbody>
-              </table>
-            </div>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Mobile Card View */}
-            <div className="block sm:hidden space-y-4">
-              {assignmentsLoading
-                ? Array(5)
-                    .fill(0)
-                    .map((_, i) => (
-                      <SkeletonLoader key={i} type="card" />
-                    ))
-                : uploads.map((upload) => (
+              {/* Mobile Card View */}
+              <div className="block sm:hidden space-y-4">
+                {assignmentsLoading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <SkeletonLoader key={i} type="card" />
+                  ))
+                ) : uploads.length === 0 ? (
+                  <div className="p-4 text-center text-white">
+                    No uploads found
+                  </div>
+                ) : (
+                  uploads.map((upload) => (
                     <motion.div
                       key={upload.id}
                       variants={cardVariants}
@@ -260,7 +305,7 @@ export default function Dashboard() {
                         <p><strong>Matric:</strong> {upload.matric_number}</p>
                         <p><strong>Course:</strong> {upload.course_code}</p>
                         <p><strong>Level:</strong> {upload.level}</p>
-                        <p><strong>Date:</strong> {new Date(upload.uploaded_at).toLocaleDateString()} {new Date(upload.uploaded_at).toLocaleTimeString()}</p>
+                        <p><strong>Date:</strong> {formatDateForDisplay(upload.uploaded_at)}</p>
                       </div>
                       <div className="flex space-x-4 mt-3">
                         <button
@@ -271,35 +316,38 @@ export default function Dashboard() {
                         </button>
                       </div>
                     </motion.div>
-                  ))}
-            </div>
-          </>
-        )}
-        <div className="flex justify-between mt-4 sm:mt-6">
-          <motion.button
-            onClick={() => setPage((p) => Math.max(p - 1, 1))}
-            disabled={page === 1}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
-          >
-            Previous
-          </motion.button>
-          <span className="text-white/80 text-sm sm:text-base">
-            Page {page} of {totalPages}
-          </span>
-          <motion.button
-            onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-            disabled={page === totalPages}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
-          >
-            Next
-          </motion.button>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Pagination Controls */}
+          <div className="flex justify-between mt-4 sm:mt-6">
+            <motion.button
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1 || assignmentsLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
+            >
+              Previous
+            </motion.button>
+            <span className="text-white/80 text-sm sm:text-base">
+              Page {page} of {totalPages}
+            </span>
+            <motion.button
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages || assignmentsLoading}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg shadow-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
+            >
+              Next
+            </motion.button>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  </div>
-);
+      </motion.div>
+    </div>
+  );
 }
