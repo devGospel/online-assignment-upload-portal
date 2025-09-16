@@ -167,13 +167,13 @@ export default function SignupPage() {
                 <span className="mx-4 text-white/60 text-sm">OR</span>
                 <div className="border-t border-white/20 flex-grow"></div>
               </div>
-              <GoogleLogin
+              {/* <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google signup failed')}
                 theme="filled_blue"
                 size="large"
                 width="100%"
-              />
+              /> */}
             </div>
             <div className="mt-6 text-white/60 text-sm">
               <p>
