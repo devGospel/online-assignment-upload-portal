@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -38,15 +38,25 @@ const tableRowVariants = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuthContext();
+  const { user, loading: authLoading } = useAuthContext();
   const router = useRouter();
-  const isAdmin = user?.role === "admin";
+  const [isAdmin, setIsAdmin] = useState(false);
   const [filters, setFilters] = useState({ 
     studentName: "", 
     matricNumber: "", 
     date: "" 
   });
   const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else {
+        setIsAdmin(user.role === "admin");
+      }
+    }
+  }, [user, authLoading, router]);
 
   const { 
     uploads, 
@@ -96,6 +106,7 @@ export default function Dashboard() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Error downloading file:", error);
+      router.push('/login');
     }
   }
 
@@ -107,6 +118,20 @@ export default function Dashboard() {
       : date.toLocaleString();
   };
 
+  const isMatricNumberValid = filters.matricNumber.length >= 15;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen p-4 sm:p-6 mt-16 bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center">
+        <SkeletonLoader type="card" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen p-4 sm:p-6 mt-16 bg-gradient-to-br from-purple-900 via-black to-blue-900 flex flex-col items-center justify-center">
       <motion.div
@@ -117,29 +142,29 @@ export default function Dashboard() {
       >
         <h1 className="text-2xl sm:text-3xl font-bold mb-6 sm:mb-8 text-white">Dashboard</h1>
 
-        {/* Analytics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="visible"
-            whileHover={{ scale: 1.05 }}
-            onClick={() => router.push("/dashboard/uploads")}
-            className="p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl cursor-pointer text-white"
-          >
-            {assignmentsLoading ? (
-              <SkeletonLoader type="card" />
-            ) : assignmentsError ? (
-              <div className="text-red-400">Error loading data</div>
-            ) : (
-              <>
-                <FaUpload className="text-3xl mb-4 text-blue-400 mx-auto" />
-                <h3 className="text-xl font-semibold text-white">Total Uploads</h3>
-                <p className="text-3xl font-bold text-white">{totalUploads}</p>
-              </>
-            )}
-          </motion.div>
-          {isAdmin && (
+        {/* Analytics Cards - Only for Admin */}
+        {isAdmin && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
+            <motion.div
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              whileHover={{ scale: 1.05 }}
+              onClick={() => router.push("/dashboard/uploads")}
+              className="p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl cursor-pointer text-white"
+            >
+              {assignmentsLoading ? (
+                <SkeletonLoader type="card" />
+              ) : assignmentsError ? (
+                <div className="text-red-400">Error loading data</div>
+              ) : (
+                <>
+                  <FaUpload className="text-3xl mb-4 text-blue-400 mx-auto" />
+                  <h3 className="text-xl font-semibold text-white">Total Uploads</h3>
+                  <p className="text-3xl font-bold text-white">{totalUploads}</p>
+                </>
+              )}
+            </motion.div>
             <motion.div
               variants={cardVariants}
               initial="hidden"
@@ -160,8 +185,8 @@ export default function Dashboard() {
                 </>
               )}
             </motion.div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Recent Uploads Section */}
         <div className="p-4 sm:p-6 bg-white/10 backdrop-blur-md rounded-xl shadow-xl">
@@ -190,7 +215,7 @@ export default function Dashboard() {
               <input
                 type="text"
                 name="matricNumber"
-                placeholder="Filter by Matric Number"
+                placeholder="Filter by Matric Number (e.g., 2019/1/728338CT)"
                 value={filters.matricNumber}
                 onChange={handleFilterChange}
                 className="p-2 rounded-lg bg-white/5 border-white/20 text-white text-sm sm:text-base w-full"
@@ -215,9 +240,9 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!isAdmin && !filters.matricNumber ? (
+          {!isAdmin && !isMatricNumberValid ? (
             <div className="p-4 bg-yellow-500/20 rounded-lg text-white text-sm sm:text-base">
-              <p>Please enter your matric number to view your upload history.</p>
+              <p>Please enter a valid matric number (at least 15 characters, e.g., 2019/1/728338CT) to view your upload history.</p>
             </div>
           ) : (
             <>
@@ -351,28 +376,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

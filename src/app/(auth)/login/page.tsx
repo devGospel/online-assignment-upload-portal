@@ -147,13 +147,13 @@ export default function LoginPage() {
                 <div className="border-t border-white/20 flex-grow"></div>
               </div>
 
-              <GoogleLogin
+              {/* <GoogleLogin
                 onSuccess={handleGoogleSuccess}
                 onError={() => setError('Google login failed')}
                 theme="filled_blue"
                 size="large"
                 width="100%"
-              />
+              /> */}
             </div>
 
             <div className="mt-6 text-white/60 text-sm">

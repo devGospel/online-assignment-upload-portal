@@ -1,34 +1,59 @@
-// app/api/uploadAssignment/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import cloudinary from '../../lib/cloudinary';
 import client from '../../lib/db';
-import { NextRequest, NextResponse } from 'next/server';
 import { Readable } from 'stream';
 
 export async function POST(req: NextRequest) {
   try {
-    // Ensure FormData is parsed correctly
+    // Parse FormData
     const formData = await req.formData();
     const studentName = formData.get('studentName')?.toString() || '';
     const matricNumber = formData.get('matricNumber')?.toString() || '';
     const level = formData.get('level')?.toString() || '';
     const courseCode = formData.get('courseCode')?.toString() || '';
-    const file = formData.get('file') as Blob;
+    const file = formData.get('file') as File;
 
-    // Handle empty or missing file
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    // Validate inputs
+    if (!studentName || !matricNumber || !level || !courseCode || !file) {
+      return NextResponse.json({ error: 'All fields are required' }, { status: 400 });
     }
 
-    // Convert file (Blob) to buffer
+    // Validate matric number (≥14 characters)
+    if (matricNumber.length < 14) {
+      return NextResponse.json(
+        { error: 'Matric number must be at least 14 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type and extension
+    const validMimeTypes = [
+      'application/zip',
+      'application/x-zip-compressed',
+      'application/octet-stream',
+    ];
+    const isValidExtension = file.name.toLowerCase().endsWith('.zip');
+    if (!validMimeTypes.includes(file.type) || !isValidExtension) {
+      return NextResponse.json(
+        { error: 'Only ZIP files with .zip extension are allowed' },
+        { status: 400 }
+      );
+    }
+
+    // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Create a promise to return response after the upload and DB insertion
+    // Upload to Cloudinary
     const uploadPromise = new Promise<NextResponse>((resolve, reject) => {
-      // Upload file to Cloudinary
-      const result = cloudinary.uploader.upload_stream(
+      const publicId = `assignments/${matricNumber.replace(/\//g, '-')}_${courseCode}_${Date.now()}.zip`;
+      const uploadStream = cloudinary.uploader.upload_stream(
         {
           resource_type: 'raw',
+          public_id: publicId,
+          folder: 'assignments',
+          // Generate signed URL if required
+          // sign_url: true, // Uncomment if signed URLs are enabled in Cloudinary
         },
         (error, result) => {
           if (error) {
@@ -36,45 +61,43 @@ export async function POST(req: NextRequest) {
             return reject(new Error(`Cloudinary upload failed: ${error.message}`));
           }
 
-          // Save metadata to NeonDB
+          // Save to database
           const query = `
-            INSERT INTO assignments (student_name, matric_number, level, course_code, file_url)
-            VALUES ($1, $2, $3, $4, $5) RETURNING *;
+            INSERT INTO assignments (student_name, matric_number, level, course_code, file_url, uploaded_at)
+            VALUES ($1, $2, $3, $4, $5, NOW())
+            RETURNING id, student_name, matric_number, level, course_code, file_url, uploaded_at
           `;
-          const values = [studentName, matricNumber, level, courseCode, result?.secure_url];
+          const fileUrl = result?.secure_url || '';
+          const values = [studentName, matricNumber, level, courseCode, fileUrl];
 
-          // Insert metadata into the database
           client.query(query, values, (err, dbResult) => {
             if (err) {
               console.error('Database insertion failed:', err);
               return reject(new Error('Database insertion failed'));
             }
-            // Respond with success and metadata
-            resolve(NextResponse.json({
-              message: 'File uploaded successfully',
-              data: dbResult.rows[0],
-            }));
+            resolve(
+              NextResponse.json({
+                message: 'ZIP file uploaded successfully',
+                data: dbResult.rows[0],
+              })
+            );
           });
         }
       );
 
       // Stream the file to Cloudinary
       const readable = Readable.from(buffer);
-      readable.pipe(result);
+      readable.pipe(uploadStream);
     });
 
-    // Wait for the upload promise to resolve and return the response
     return await uploadPromise;
- } catch (error) {
-  console.error('Error in file upload process:', error);
-  return NextResponse.json(
-    {
-      error: error instanceof Error ? error.message : 'Something went wrong!',
-    },
-    { status: 500 }
-  );
+  } catch (error) {
+    console.error('Error in file upload process:', error);
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : 'Something went wrong!',
+      },
+      { status: 500 }
+    );
+  }
 }
-}
-
-
-
