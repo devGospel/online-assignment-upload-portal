@@ -118,7 +118,7 @@ export default function Dashboard() {
       : date.toLocaleString();
   };
 
-  const isMatricNumberValid = filters.matricNumber.length >= 15;
+  const isMatricNumberValid = filters.matricNumber.length >= 14;
 
   if (authLoading) {
     return (
@@ -242,7 +242,7 @@ export default function Dashboard() {
 
           {!isAdmin && !isMatricNumberValid ? (
             <div className="p-4 bg-yellow-500/20 rounded-lg text-white text-sm sm:text-base">
-              <p>Please enter a valid matric number (at least 15 characters, e.g., 2019/1/728338CT) to view your upload history.</p>
+              <p>Please enter a valid matric number (at least 14 characters, e.g., 2019/1/728338CT) to view your upload history.</p>
             </div>
           ) : (
             <>
@@ -251,7 +251,7 @@ export default function Dashboard() {
                 <table className="w-full text-left">
                   <thead>
                     <tr className="text-white/80">
-                      <th className="p-3 text-sm sm:text-base">Student Name</th>
+                      {/* <th className="p-3 text-sm sm:text-base">Student Name</th> */}
                       <th className="p-3 text-sm sm:text-base">Matric Number</th>
                       <th className="p-3 text-sm sm:text-base">Course Code</th>
                       <th className="p-3 text-sm sm:text-base">Level</th>
@@ -283,7 +283,7 @@ export default function Dashboard() {
                           animate="visible"
                           className="border-t border-white/20"
                         >
-                          <td className="p-3 text-white text-sm sm:text-base">{upload.student_name}</td>
+                          {/* <td className="p-3 text-white text-sm sm:text-base">{upload.student_name}</td> */}
                           <td className="p-3 text-white text-sm sm:text-base">{upload.matric_number}</td>
                           <td className="p-3 text-white text-sm sm:text-base">{upload.course_code}</td>
                           <td className="p-3 text-white text-sm sm:text-base">{upload.level}</td>

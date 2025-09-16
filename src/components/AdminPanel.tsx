@@ -98,7 +98,7 @@ export default function AdminPanel() {
 								className="border-b border-gray-100"
 							>
 								<td className="py-4 ps-4">
-									{submission.student_name.toUpperCase()}
+									{/* {submission.student_name.toUpperCase()} */}
 								</td>
 								<td className="py-4">
 									{submission.matric_number.toUpperCase()}
